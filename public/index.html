@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPG WOW Spageti Report</title>
+
+    <!-- Meta PWA -->
+    <meta name="theme-color" content="#FF7043"/>
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Ikon dan Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Konfigurasi Font Kustom */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #F9F9F9;
+        }
+        /* Warna tema kustom (pastel oranye) */
+        .bg-primary { background-color: #FF7043; }
+        .text-primary { color: #FF7043; }
+        .border-primary { border-color: #FF7043; }
+
+        /* Sembunyikan halaman secara default */
+        .app-page { display: none; }
+
+        /* Loader */
+        #app-loader {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+            display: none; /* Sembunyi by default */
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #FF7043;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Transisi Halaman (Sederhana) */
+        .app-page {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Styling Video Kamera */
+        #camera-preview {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 12px;
+            transform: scaleX(-1); /* Cermin untuk kamera depan */
+        }
+        #selfie-canvas { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Loader Global -->
+    <div id="app-loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- ===== HALAMAN LOGIN ===== -->
+    <div id="login-page" class="app-page min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-6">
+                <i class="fa-solid fa-clipboard-list text-primary text-6xl"></i>
+                <h1 class="text-3xl font-bold text-gray-800 mt-3">WOW Spageti Report</h1>
+                <p class="text-gray-500">Silakan login untuk melanjutkan</p>
+            </div>
+            
+            <form id="login-form" class="bg-white p-6 rounded-2xl shadow-lg">
+                <div class="mb-4">
+                    <label for="login-email" class="block text-sm font-medium text-gray-600 mb-1">Email</label>
+                    <input type="email" id="login-email" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                </div>
+                
+                <div class="mb-6 relative">
+                    <label for="login-password" class="block text-sm font-medium text-gray-600 mb-1">Password</label>
+                    <input type="password" id="login-password" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary" required>
+                    <button type="button" class="absolute right-4 top-10 text-gray-400" onclick="togglePassword('login-password', this)">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                
+                <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+                    Login
+                </button>
+
+                <div class="text-center mt-4">
+                    <a href="#" class="text-sm text-primary hover:underline">Lupa Password?</a>
+                </div>
+                
+                <div class="text-center mt-6">
+                    <span class="text-gray-600">Belum punya akun?</span>
+                    <button type="button" id="btn-goto-register" class="font-semibold text-primary hover:underline ml-1">
+                        Registrasi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== HALAMAN REGISTRASI ===== -->
+    <div id="register-page" class="app-page min-h-screen p-4 py-8">
+        <div class="w-full max-w-md mx-auto">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">Buat Akun Baru</h1>
+                <p class="text-gray-500">Isi data Anda dengan lengkap</p>
+            </div>
+            
+            <form id="register-form" class="bg-white p-6 rounded-2xl shadow-lg space-y-4">
+                <input type="text" id="reg-nama" placeholder="Nama Lengkap" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                <input type="text" id="reg-ktp" placeholder="Nomor KTP" class="w-full px-4 py-3 rounded-lg border border-gray-300" required pattern="\d{16}">
+                <input type="tel" id="reg-telepon" placeholder="Nomor Telepon (08...)" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                <input type="email" id="reg-email" placeholder="Email" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                
+                <div class="relative">
+                    <input type="password" id="reg-password" placeholder="Password" class="w-full px-4 py-3 rounded-lg border border-gray-300" required pattern=".{8,}" title="Minimal 8 karakter">
+                    <button type="button" class="absolute right-4 top-3.5 text-gray-400" onclick="togglePassword('reg-password', this)">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+                <!-- Indikator kekuatan password bisa ditambahkan di sini -->
+
+                <textarea id="reg-alamat" placeholder="Alamat Domisili" class="w-full px-4 py-3 rounded-lg border border-gray-300" rows="3" required></textarea>
+                <input type="text" id="reg-norek" placeholder="Nomor Rekening" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                <input type="text" id="reg-bank" placeholder="Nama Bank" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                
+                <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+                    Registrasi
+                </button>
+
+                <div class="text-center mt-4">
+                    <span class="text-gray-600">Sudah punya akun?</span>
+                    <button type="button" id="btn-goto-login" class="font-semibold text-primary hover:underline ml-1">
+                        Login
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== APLIKASI UTAMA (Setelah Login) ===== -->
+    <div id="main-app" class="app-page max-w-md mx-auto bg-white min-h-screen shadow-2xl">
+        
+        <!-- Header Tetap -->
+        <header id="app-header" class="sticky top-0 bg-white px-4 py-4 shadow-md z-10 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-primary">WOW Spageti Report</h1>
+            <div>
+                <!-- Tombol Logout/Profil bisa ditaruh di sini -->
+                <button id="btn-logout" class="text-gray-500 hover:text-primary">
+                    <i class="fa-solid fa-right-from-bracket fa-lg"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Konten Halaman Dinamis -->
+        <main id="page-content" class="p-4 pb-24">
+
+            <!-- == Dashboard == -->
+            <div id="dashboard-page" class="app-content-page">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-2">Selamat Datang,</h2>
+                <h3 id="user-name-display" class="text-xl text-gray-600 mb-6">SPG User</h3>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <button data-page="absen-page" class="app-nav-btn bg-primary text-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center aspect-square">
+                        <i class="fa-solid fa-camera fa-3x mb-3"></i>
+                        <span class="font-semibold text-lg">Absen</span>
+                    </button>
+                    <button data-page="cek-absen-page" class="app-nav-btn bg-white text-gray-700 p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center aspect-square">
+                        <i class="fa-solid fa-calendar-check fa-3x mb-3"></i>
+                        <span class="font-semibold text-lg">Cek Absen</span>
+                    </button>
+                    <button data-page="laporan-jual-page" class="app-nav-btn bg-white text-gray-700 p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center aspect-square">
+                        <i class="fa-solid fa-chart-line fa-3x mb-3"></i>
+                        <span class="font-semibold text-lg">Lapor Jual</span>
+                    </button>
+                    <button data-page="cek-laporan-jual-page" class="app-nav-btn bg-white text-gray-700 p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center aspect-square">
+                        <i class="fa-solid fa-clipboard-list fa-3x mb-3"></i>
+                        <span class="font-semibold text-lg">Cek Laporan</span>
+                    </button>
+                    <button data-page="laporan-issue-page" class="app-nav-btn bg-white text-gray-700 p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center aspect-square col-span-2">
+                        <i class="fa-solid fa-triangle-exclamation fa-3x mb-3"></i>
+                        <span class="font-semibold text-lg">Laporan Kendala</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- == Halaman Absen == -->
+            <div id="absen-page" class="app-content-page hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Form Absensi</h2>
+                <form id="absen-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Area (Kota)</label>
+                        <select id="absen-area" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                            <option value="">Pilih Area</option>
+                            <!-- Opsi akan di-load oleh JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Toko</label>
+                        <select id="absen-toko" class="w-full px-4 py-3 rounded-lg border border-gray-300" required disabled>
+                            <option value="">Pilih Toko</option>
+                            <!-- Opsi akan di-load oleh JS -->
+                        </select>
+                    </div>
+
+                    <!-- Geolocation -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Koordinat</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="absen-koordinat" class="w-full px-4 py-3 rounded-lg border border-gray-300 bg-gray-100" readonly required>
+                            <button type="button" id="btn-get-location" class="flex-shrink-0 bg-blue-500 text-white px-4 py-2 rounded-lg">
+                                <i class="fa-solid fa-location-crosshairs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Kamera -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Selfie Absen</label>
+                        <div class="bg-gray-200 rounded-lg p-2 text-center">
+                            <video id="camera-preview" autoplay playsinline></video>
+                            <canvas id="selfie-canvas"></canvas>
+                            <input type="hidden" id="selfie-data-url">
+                            <button type="button" id="btn-start-camera" class="w-full bg-gray-600 text-white py-2 rounded-lg mt-2">
+                                <i class="fa-solid fa-camera mr-2"></i>Buka Kamera
+                            </button>
+                            <button type="button" id="btn-take-selfie" class="w-full bg-primary text-white py-2 rounded-lg mt-2 hidden">
+                                <i class="fa-solid fa-circle-dot mr-2"></i>Ambil Foto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 pt-4">
+                        <button type="submit" data-jenis="masuk" class="w-full bg-green-500 text-white py-3 rounded-lg font-semibold">
+                            Absen Masuk
+                        </button>
+                        <button type="submit" data-jenis="pulang" class="w-full bg-red-500 text-white py-3 rounded-lg font-semibold">
+                            Absen Pulang
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- == Halaman Cek Absen == -->
+            <div id="cek-absen-page" class="app-content-page hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Riwayat Absensi</h2>
+                <div id="absen-list" class="space-y-3">
+                    <!-- Data dummy, akan diganti JS -->
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="font-semibold">Data tidak ditemukan.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- == Halaman Laporan Penjualan == -->
+            <div id="laporan-jual-page" class="app-content-page hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Laporan Penjualan</h2>
+                <form id="laporan-jual-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Area (Kota)</label>
+                        <select id="lapor-area" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                            <option value="">Pilih Area</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Toko</label>
+                        <select id="lapor-toko" class="w-full px-4 py-3 rounded-lg border border-gray-300" required disabled>
+                            <option value="">Pilih Toko</option>
+                        </select>
+                    </div>
+                    
+                    <h3 class="font-semibold text-lg pt-2">Jumlah (Pcs)</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">WOW Spageti Bolognese</label>
+                        <input type="number" id="jual-bolognese" class="w-full px-4 py-3 rounded-lg border border-gray-300" value="0" min="0" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">WOW Spageti Carbonara</label>
+                        <input type="number" id="jual-carbonara" class="w-full px-4 py-3 rounded-lg border border-gray-300" value="0" min="0" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">WOW Spageti Aglio Olio</label>
+                        <input type="number" id="jual-aglio" class="w-full px-4 py-3 rounded-lg border border-gray-300" value="0" min="0" required>
+                    </div>
+
+                    <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg font-semibold mt-4">
+                        Kirim Laporan
+                    </button>
+                </form>
+            </div>
+
+            <!-- == Halaman Cek Laporan Penjualan == -->
+            <div id="cek-laporan-jual-page" class="app-content-page hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Riwayat Laporan Penjualan</h2>
+                <!-- Filter bisa ditambahkan di sini -->
+                <div id="laporan-jual-list" class="space-y-3">
+                    <p class="bg-white p-4 rounded-lg shadow">Data tidak ditemukan.</p>
+                </div>
+            </div>
+
+            <!-- == Halaman Laporan Issue == -->
+            <div id="laporan-issue-page" class="app-content-page hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Laporan Kendala</h2>
+                <form id="laporan-issue-form" class="space-y-4">
+                     <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Area (Kota)</label>
+                        <select id="issue-area" class="w-full px-4 py-3 rounded-lg border border-gray-300" required>
+                            <option value="">Pilih Area</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nama Toko</label>
+                        <select id="issue-toko" class="w-full px-4 py-3 rounded-lg border border-gray-300" required disabled>
+                            <option value="">Pilih Toko</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Deskripsi Kendala</label>
+                        <textarea id="issue-deskripsi" class="w-full px-4 py-3 rounded-lg border border-gray-300" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg font-semibold mt-4">
+                        Kirim Laporan
+                    </button>
+                </form>
+            </div>
+
+        </main>
+
+        <!-- Navigasi Bawah -->
+        <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 flex justify-around p-3 z-10 shadow-inner">
+            <button data-page="dashboard-page" class="bottom-nav-btn flex flex-col items-center text-primary">
+                <i class="fa-solid fa-table-cells-large fa-lg"></i>
+                <span class="text-xs font-medium mt-1">Home</span>
+            </button>
+            <button data-page="absen-page" class="bottom-nav-btn flex flex-col items-center text-gray-500">
+                <i class="fa-solid fa-camera fa-lg"></i>
+                <span class="text-xs font-medium mt-1">Absen</span>
+            </button>
+            <button data-page="laporan-jual-page" class="bottom-nav-btn flex flex-col items-center text-gray-500">
+                <i class="fa-solid fa-chart-line fa-lg"></i>
+                <span class="text-xs font-medium mt-1">Lapor</span>
+            </button>
+            <button data-page="cek-absen-page" class="bottom-nav-btn flex flex-col items-center text-gray-500">
+                <i class="fa-solid fa-calendar-check fa-lg"></i>
+                <span class="text-xs font-medium mt-1">Riwayat</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <script>
+        // URL API Backend Anda
+        // Sesuaikan dengan URL hosting Anda, misal: 'https://report.pilarkreasiseni.co.id/api'
+        const API_BASE_URL = '/api'; // Gunakan /api jika frontend dan backend di domain yang sama
+
+        // Mock Data untuk Toko (Idealnya ini didapat dari API)
+        const mockTokoData = {
+            "Jakarta": ["Toko A Jakarta", "Toko B Jakarta", "Toko C Jakarta"],
+            "Surabaya": ["Toko D Surabaya", "Toko E Surabaya"],
+            "Bandung": ["Toko F Bandung", "Toko G Bandung", "Toko H Bandung"]
+        };
+        const mockAreas = Object.keys(mockTokoData);
+
+        // Referensi Elemen DOM
+        let currentPage = 'login';
+        let currentUser = null;
+        let cameraStream = null;
+
+        const pages = document.querySelectorAll('.app-page');
+        const appContentPages = document.querySelectorAll('.app-content-page');
+        const bottomNavBtns = document.querySelectorAll('.bottom-nav-btn');
+        const appNavBtns = document.querySelectorAll('.app-nav-btn');
+        
+        const loginPage = document.getElementById('login-page');
+        const registerPage = document.getElementById('register-page');
+        const mainAppPage = document.getElementById('main-app');
+
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const btnGotoRegister = document.getElementById('btn-goto-register');
+        const btnGotoLogin = document.getElementById('btn-goto-login');
+        const btnLogout = document.getElementById('btn-logout');
+
+        // Form Absen
+        const absenForm = document.getElementById('absen-form');
+        const absenAreaSelect = document.getElementById('absen-area');
+        const absenTokoSelect = document.getElementById('absen-toko');
+        const btnGetLocation = document.getElementById('btn-get-location');
+        const koordinatInput = document.getElementById('absen-koordinat');
+        const btnStartCamera = document.getElementById('btn-start-camera');
+        const btnTakeSelfie = document.getElementById('btn-take-selfie');
+        const cameraPreview = document.getElementById('camera-preview');
+        const selfieCanvas = document.getElementById('selfie-canvas');
+        const selfieDataUrlInput = document.getElementById('selfie-data-url');
+        const absenListPage = document.getElementById('absen-list');
+        
+        // Form Laporan Jual
+        const laporJualForm = document.getElementById('laporan-jual-form');
+        const laporAreaSelect = document.getElementById('lapor-area');
+        const laporTokoSelect = document.getElementById('lapor-toko');
+        const laporJualListPage = document.getElementById('laporan-jual-list');
+
+        // Form Issue
+        const laporIssueForm = document.getElementById('laporan-issue-form');
+        const issueAreaSelect = document.getElementById('issue-area');
+        const issueTokoSelect = document.getElementById('issue-toko');
+
+        // Utility Functions
+        function showLoader(show) {
+            document.getElementById('app-loader').style.display = show ? 'flex' : 'none';
+        }
+
+        function showPage(pageId) {
+            pages.forEach(page => {
+                page.style.display = (page.id === pageId) ? 'block' : 'none';
+            });
+            currentPage = pageId;
+            // Stop kamera jika meninggalkan halaman absen
+            if (pageId !== 'main-app' || currentPage !== 'absen-page') {
+                stopCamera();
+            }
+        }
+
+        function showAppPage(pageId) {
+            appContentPages.forEach(page => {
+                page.classList.toggle('hidden', page.id !== pageId);
+            });
+            
+            bottomNavBtns.forEach(btn => {
+                btn.classList.toggle('text-primary', btn.dataset.page === pageId);
+                btn.classList.toggle('text-gray-500', btn.dataset.page !== pageId);
+            });
+            
+            currentPage = pageId;
+            document.getElementById('page-content').scrollTop = 0; // Scroll to top
+
+            // Load data saat halaman dibuka
+            if (pageId === 'cek-absen-page') loadAbsenHistory();
+            if (pageId === 'cek-laporan-jual-page') loadLaporanJualHistory();
+            if (pageId === 'absen-page') {
+                btnStartCamera.classList.remove('hidden');
+                btnTakeSelfie.classList.add('hidden');
+                selfieDataUrlInput.value = '';
+            }
+        }
+
+        function togglePassword(fieldId, button) {
+            const field = document.getElementById(fieldId);
+            const icon = button.querySelector('i');
+            if (field.type === 'password') {
+                field.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                field.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // Fungsi untuk populate dropdown
+        function populateAreas() {
+            [absenAreaSelect, laporAreaSelect, issueAreaSelect].forEach(select => {
+                if(!select) return;
+                select.innerHTML = '<option value="">Pilih Area</option>';
+                mockAreas.forEach(area => {
+                    select.innerHTML += `<option value="${area}">${area}</option>`;
+                });
+            });
+        }
+
+        function updateTokoOptions(areaSelect, tokoSelect) {
+            const selectedArea = areaSelect.value;
+            tokoSelect.innerHTML = '<option value="">Pilih Toko</option>';
+            if (selectedArea && mockTokoData[selectedArea]) {
+                tokoSelect.disabled = false;
+                mockTokoData[selectedArea].forEach(toko => {
+                    tokoSelect.innerHTML += `<option value="${toko}">${toko}</option>`;
+                });
+            } else {
+                tokoSelect.disabled = true;
+            }
+        }
+
+        // Fungsi API Call (simulasi, ganti dengan fetch)
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            showLoader(true);
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            const options = {
+                method,
+                headers,
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(API_BASE_URL + endpoint, options);
+                
+                if (response.status === 401) {
+                    // Unauthorized, token expired or invalid
+                    handleLogout();
+                    Swal.fire('Session Habis', 'Silakan login kembali', 'warning');
+                    return null;
+                }
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || 'Terjadi kesalahan');
+                }
+
+                if (response.status === 204) { // No content
+                    return true;
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Call Error:', error);
+                Swal.fire('Error', error.message, 'error');
+                return null;
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        // ===== LOGIKA AUTH =====
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            const data = await apiCall('/auth/login', 'POST', { email, password });
+
+            if (data && data.token) {
+                localStorage.setItem('token', data.token);
+                currentUser = data.user;
+                document.getElementById('user-name-display').textContent = currentUser.nama || 'SPG User';
+                showPage('main-app');
+                showAppPage('dashboard-page');
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('reg-password').value;
+            if (password.length < 8) {
+                Swal.fire('Error', 'Password minimal 8 karakter', 'error');
+                return;
+            }
+            
+            const formData = {
+                nama: document.getElementById('reg-nama').value,
+                ktp: document.getElementById('reg-ktp').value,
+                telepon: document.getElementById('reg-telepon').value,
+                email: document.getElementById('reg-email').value,
+                password: password,
+                alamat: document.getElementById('reg-alamat').value,
+                norek: document.getElementById('reg-norek').value,
+                bank: document.getElementById('reg-bank').value,
+            };
+
+            const data = await apiCall('/auth/register', 'POST', formData);
+
+            if (data) {
+                Swal.fire('Sukses', 'Registrasi berhasil! Silakan login.', 'success');
+                showPage('login-page');
+            }
+        });
+
+        btnLogout.addEventListener('click', handleLogout);
+
+        function handleLogout() {
+            localStorage.removeItem('token');
+            currentUser = null;
+            showPage('login-page');
+        }
+
+        async function checkLoginState() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showPage('login-page');
+                return;
+            }
+
+            // Verifikasi token ke backend
+            const data = await apiCall('/auth/me'); // 'me' endpoint untuk cek token
+            if (data && data.user) {
+                currentUser = data.user;
+                document.getElementById('user-name-display').textContent = currentUser.nama || 'SPG User';
+                showPage('main-app');
+                showAppPage('dashboard-page');
+            } else {
+                // Token tidak valid
+                handleLogout();
+            }
+        }
+
+        // ===== LOGIKA HARDWARE (Geo & Kamera) =====
+
+        btnGetLocation.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                Swal.fire('Error', 'Geolocation tidak didukung browser Anda', 'error');
+                return;
+            }
+            showLoader(true);
+            btnGetLocation.disabled = true;
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const coords = `${position.coords.latitude}, ${position.coords.longitude}`;
+                    koordinatInput.value = coords;
+                    showLoader(false);
+                    btnGetLocation.disabled = false;
+                },
+                (error) => {
+                    console.error('Geolocation Error:', error);
+                    Swal.fire('Error', 'Gagal mendapatkan lokasi. Pastikan GPS aktif.', 'error');
+                    showLoader(false);
+                    btnGetLocation.disabled = false;
+                },
+                { enableHighAccuracy: true }
+            );
+        });
+
+        btnStartCamera.addEventListener('click', async () => {
+            if (cameraStream) stopCamera(); // Stop stream lama jika ada
+
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user' }, // 'user' untuk kamera depan
+                    audio: false 
+                });
+                cameraPreview.srcObject = cameraStream;
+                btnStartCamera.classList.add('hidden');
+                btnTakeSelfie.classList.remove('hidden');
+            } catch (err) {
+                console.error('Camera Error:', err);
+                Swal.fire('Error', 'Gagal mengakses kamera. Pastikan izin telah diberikan.', 'error');
+            }
+        });
+
+        btnTakeSelfie.addEventListener('click', () => {
+            const context = selfieCanvas.getContext('2d');
+            selfieCanvas.width = cameraPreview.videoWidth;
+            selfieCanvas.height = cameraPreview.videoHeight;
+            
+            // Cerminkan gambar saat menggambar ke canvas
+            context.translate(selfieCanvas.width, 0);
+            context.scale(-1, 1);
+            
+            context.drawImage(cameraPreview, 0, 0, selfieCanvas.width, selfieCanvas.height);
+            
+            const dataUrl = selfieCanvas.toDataURL('image/jpeg', 0.8); // Kompresi 80%
+            selfieDataUrlInput.value = dataUrl;
+            
+            // Tampilkan preview foto (opsional, bisa ganti video dengan canvas)
+            // Untuk saat ini, kita stop kamera saja
+            stopCamera();
+            btnTakeSelfie.classList.add('hidden');
+            btnStartCamera.classList.remove('hidden');
+            btnStartCamera.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Foto Diambil (Ulangi?)';
+
+            Swal.fire({
+                toast: true,
+                position: 'top',
+                icon: 'success',
+                title: 'Foto berhasil diambil',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        });
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+                cameraPreview.srcObject = null;
+            }
+        }
+
+        // ===== LOGIKA FORM =====
+
+        // Event Listener untuk dropdown Area -> Toko
+        absenAreaSelect.addEventListener('change', () => updateTokoOptions(absenAreaSelect, absenTokoSelect));
+        laporAreaSelect.addEventListener('change', () => updateTokoOptions(laporAreaSelect, laporTokoSelect));
+        issueAreaSelect.addEventListener('change', () => updateTokoOptions(issueAreaSelect, issueTokoSelect));
+
+        // Submit Absen
+        absenForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const jenisAbsen = e.submitter.dataset.jenis;
+            
+            const formData = {
+                area: absenAreaSelect.value,
+                toko: absenTokoSelect.value,
+                koordinat: koordinatInput.value,
+                foto: selfieDataUrlInput.value, // base64 string
+                jenis_absen: jenisAbsen
+            };
+
+            if (!formData.area || !formData.toko || !formData.koordinat || !formData.foto) {
+                Swal.fire('Error', 'Semua field wajib diisi, termasuk lokasi dan foto.', 'error');
+                return;
+            }
+
+            const result = await apiCall('/absen', 'POST', formData);
+            if (result) {
+                Swal.fire('Sukses', `Absen ${jenisAbsen} berhasil!`, 'success');
+                absenForm.reset();
+                koordinatInput.value = '';
+                selfieDataUrlInput.value = '';
+                btnStartCamera.innerHTML = '<i class="fa-solid fa-camera mr-2"></i>Buka Kamera';
+                showAppPage('dashboard-page');
+            }
+        });
+        
+        // Submit Laporan Penjualan
+        laporJualForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                area: laporAreaSelect.value,
+                toko: laporTokoSelect.value,
+                bolognese: document.getElementById('jual-bolognese').value,
+                carbonara: document.getElementById('jual-carbonara').value,
+                aglio_olio: document.getElementById('jual-aglio').value,
+            };
+
+            const result = await apiCall('/laporan/penjualan', 'POST', formData);
+            if (result) {
+                Swal.fire('Sukses', 'Laporan penjualan berhasil dikirim!', 'success');
+                laporJualForm.reset();
+                showAppPage('dashboard-page');
+            }
+        });
+
+        // Submit Laporan Issue
+        laporIssueForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                area: issueAreaSelect.value,
+                toko: issueTokoSelect.value,
+                deskripsi: document.getElementById('issue-deskripsi').value,
+            };
+
+            const result = await apiCall('/laporan/issue', 'POST', formData);
+            if (result) {
+                Swal.fire('Sukses', 'Laporan kendala berhasil dikirim!', 'success');
+                laporIssueForm.reset();
+                showAppPage('dashboard-page');
+            }
+        });
+
+        // ===== LOGIKA LOAD DATA =====
+
+        async function loadAbsenHistory() {
+            const data = await apiCall('/absen');
+            if (data && data.length > 0) {
+                absenListPage.innerHTML = data.map(absen => `
+                    <div class="bg-white p-4 rounded-lg shadow-md flex items-center gap-4">
+                        <img src="${absen.foto}" alt="Selfie" class="w-16 h-16 rounded-full object-cover border-2 border-primary">
+                        <div class="flex-1">
+                            <p class="font-semibold text-lg">${absen.toko} <span class="text-sm font-normal text-white px-2 py-0.5 rounded-full ${absen.jenis_absen === 'masuk' ? 'bg-green-500' : 'bg-red-500'}">${absen.jenis_absen}</span></p>
+                            <p class="text-gray-600 text-sm">${absen.area}</p>
+                            <p class="text-gray-500 text-xs mt-1">${new Date(absen.tanggal).toLocaleString('id-ID')}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else if (data) {
+                absenListPage.innerHTML = '<p class="bg-white p-4 rounded-lg shadow">Belum ada riwayat absen.</p>';
+            }
+        }
+
+        async function loadLaporanJualHistory() {
+            const data = await apiCall('/laporan/penjualan');
+            if (data && data.length > 0) {
+                laporJualListPage.innerHTML = data.map(lapor => `
+                    <div class="bg-white p-4 rounded-lg shadow-md">
+                        <p class="font-semibold text-lg">${lapor.toko}</p>
+                        <p class="text-gray-600 text-sm">${lapor.area}</p>
+                        <p class="text-gray-500 text-xs mt-1">${new Date(lapor.tanggal).toLocaleDateString('id-ID')}</p>
+                        <hr class="my-2">
+                        <ul class="text-sm space-y-1">
+                            <li>Bolognese: <span class="font-semibold">${lapor.bolognese} pcs</span></li>
+                            <li>Carbonara: <span class="font-semibold">${lapor.carbonara} pcs</span></li>
+                            <li>Aglio Olio: <span class="font-semibold">${lapor.aglio_olio} pcs</span></li>
+                        </ul>
+                    </div>
+                `).join('');
+            } else if (data) {
+                laporJualListPage.innerHTML = '<p class="bg-white p-4 rounded-lg shadow">Belum ada riwayat laporan.</p>';
+            }
+        }
+
+        // ===== INISIALISASI =====
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Navigasi Halaman Login/Register
+            btnGotoRegister.addEventListener('click', () => showPage('register-page'));
+            btnGotoLogin.addEventListener('click', () => showPage('login-page'));
+
+            // Navigasi Aplikasi Utama (Bottom Nav)
+            bottomNavBtns.forEach(btn => {
+                btn.addEventListener('click', () => showAppPage(btn.dataset.page));
+            });
+
+            // Navigasi Dashboard
+            appNavBtns.forEach(btn => {
+                btn.addEventListener('click', () => showAppPage(btn.dataset.page));
+            });
+
+            // Populate dropdown
+            populateAreas();
+
+            // Cek status login saat memuat
+            checkLoginState();
+
+            // Registrasi Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker terdaftar:', registration);
+                    })
+                    .catch(error => {
+                        console.error('Pendaftaran Service Worker gagal:', error);
+                    });
+            }
+        });
+
+    </script>
+</body>
+</html>
